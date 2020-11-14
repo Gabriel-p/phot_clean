@@ -24,30 +24,35 @@ def main():
     col_names, V_min, V_max, BV_min, BV_max, UB_min, UB_max, VI_min, VI_max =\
         params_input()
 
-    # Load final photometry file.
-    f_id, phot = photLoad(col_names)
-    print("Stars in file: {}".format(len(phot)))
+    for f_id in os.listdir('in/'):
+        if f_id == 'dont_read':
+            continue
+        print('\n' + f_id)
 
-    V_min = np.nanmin(phot['V']) if V_min == 'min' else float(V_min)
-    V_max = np.nanmax(phot['V']) if V_max == 'max' else float(V_max)
+        # Load final photometry file.
+        f_id, phot = photLoad(f_id, col_names)
+        print("Stars in file: {}".format(len(phot)))
 
-    plotCMDs(
-        f_id, phot, 'all', V_min, V_max, BV_min, BV_max, UB_min, UB_max,
-        VI_min, VI_max)
+        V_min = np.nanmin(phot['V']) if V_min == 'min' else float(V_min)
+        V_max = np.nanmax(phot['V']) if V_max == 'max' else float(V_max)
 
-    phot, phot_rjct = filterPhot(
-        phot, V_min, V_max, BV_min, BV_max, UB_min, UB_max, VI_min, VI_max)
-    print("Stars in cleaned file: {}".format(len(phot)))
+        plotCMDs(
+            f_id, phot, 'all', V_min, V_max, BV_min, BV_max, UB_min, UB_max,
+            VI_min, VI_max)
 
-    plotCMDs(
-        f_id, phot_rjct, 'rjct', V_min, V_max, BV_min, BV_max, UB_min, UB_max,
-        VI_min, VI_max)
-    plotCMDs(
-        f_id, phot, 'accpt', V_min, V_max, BV_min, BV_max, UB_min, UB_max,
-        VI_min, VI_max)
-    print("Plots created")
+        phot, phot_rjct = filterPhot(
+            phot, V_min, V_max, BV_min, BV_max, UB_min, UB_max, VI_min, VI_max)
+        print("Stars in cleaned file: {}".format(len(phot)))
 
-    fileClean(f_id, phot)
+        plotCMDs(
+            f_id, phot_rjct, 'rjct', V_min, V_max, BV_min, BV_max, UB_min,
+            UB_max, VI_min, VI_max)
+        plotCMDs(
+            f_id, phot, 'accpt', V_min, V_max, BV_min, BV_max, UB_min, UB_max,
+            VI_min, VI_max)
+        print("Plots created")
+
+        fileClean(f_id, phot)
 
 
 def params_input():
@@ -56,7 +61,7 @@ def params_input():
     """
     with open('params_input.dat', "r") as f_dat:
         # Iterate through each line in the file.
-        for l, line in enumerate(f_dat):
+        for line in f_dat:
             if not line.startswith("#") and line.strip() != '':
                 reader = line.split()
                 if reader[0] == 'CN':
@@ -74,10 +79,9 @@ def params_input():
         VI_max
 
 
-def photLoad(col_names):
+def photLoad(f_id, col_names):
     """
     """
-    f_id = os.listdir('in/')[0]
     phot = ascii.read('in/' + f_id, fill_values=('INDEF', np.nan))
     phot = Table(phot, names=col_names)
 
@@ -89,13 +93,17 @@ def filterPhot(
         VI_max):
     """
     """
-    # Remove stars with 'nan' values in *all* colors and magnitude.
-    N = len(phot)
-    nan_msk = [
-        ~phot['V'].mask, ~phot['BV'].mask, ~phot['VI'].mask, ~phot['UB'].mask]
-    total_mask = reduce(np.logical_or, nan_msk)
-    phot = phot[total_mask]
-    print("Rejected stars with nan values: {}".format(N - len(phot)))
+    try:
+        # Remove stars with 'nan' values in *all* colors and magnitude.
+        N = len(phot)
+        nan_msk = [
+            ~phot['V'].mask, ~phot['BV'].mask, ~phot['VI'].mask,
+            ~phot['UB'].mask]
+        total_mask = reduce(np.logical_or, nan_msk)
+        phot = phot[total_mask]
+        print("Rejected stars with all nan values: {}".format(N - len(phot)))
+    except AttributeError:
+        print("No stars with all nan values, all stars kept: {}".format(N))
 
     # Filter colors by range, accepting 'nan' values.
     m1 = np.logical_or(phot['BV'] < BV_max, np.isnan(phot['BV']))
@@ -184,8 +192,8 @@ def fileClean(f_id, phot):
     Create clean photometry file.
     """
     ascii.write(
-        phot, 'out/' + f_id, format='fixed_width_no_header',
-        delimiter=' ', fill_values=[(ascii.masked, '99.999')], overwrite=True)
+        phot, 'out/' + f_id, format='csv', fill_values=[(ascii.masked, 'nan')],
+        overwrite=True, comment=False)
 
 
 if __name__ == '__main__':
