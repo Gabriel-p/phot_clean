@@ -7,13 +7,13 @@
 CN   id x y V eV BV eBV UB eUB VI eVI
 
 #     V_min   V_max
-VV      min     21.5
+VV      min     max
 
 #    BV_min  BV_max
-BV    -0.35     2.5
+BV    -0.5     3
 
 #    VI_min  VI_max
-VI     -0.4     3.5
+VI     -.5    4
 
 #    UB_min  UB_max
-UB     -1.3     2.5
+UB     -1       2
